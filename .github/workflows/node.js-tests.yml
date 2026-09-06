@@ -39,7 +39,7 @@ permissions:
 env:
   # The one variable that separates the arms: on baseline, action-checkout
   # skips its Set up Chalk step entirely.
-  CHALK_ON: ${{ github.event_name == 'workflow_dispatch' && inputs.leg != 'baseline' }}
+  CHALK_ON: ${{ inputs.leg == 'instrumented' }}
 
 run-name: "CI - Node.js ${{ inputs.leg || 'push' }} ${{ inputs.racecar_run }}"
 
@@ -47,7 +47,7 @@ jobs:
   lint:
     name: Lint
     # Skip PR runs for Renovate since push already triggered CI
-    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'renovate[bot]'
+    if: ${{ 'push' != 'pull_request' || github.event.pull_request.user.login != 'renovate[bot]' }}
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -176,7 +176,7 @@ jobs:
           pnpm run build
 
       - name: Upload Client Artifact
-        if: github.event_name == 'pull_request'
+        if: ${{ 'push' == 'pull_request' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: client-artifact
@@ -185,7 +185,7 @@ jobs:
 
   build-e2e-api:
     name: Build E2E API (Container)
-    if: github.event_name == 'pull_request'
+    if: ${{ 'push' == 'pull_request' }}
     runs-on: ubuntu-24.04
 
     steps:
@@ -222,11 +222,11 @@ jobs:
 
   e2e:
     name: E2E
-    if: github.event_name == 'pull_request'
+    if: ${{ 'push' == 'pull_request' }}
     needs: [build, build-e2e-api]
     uses: ./.github/workflows/e2e-playwright.yml
     with:
-      chalk_on: ${{ (github.event_name == 'workflow_dispatch' && inputs.leg != 'baseline') && 'true' || 'false' }}
+      chalk_on: ${{ inputs.leg == 'instrumented' && 'true' || 'false' }}
       profile: ${{ inputs.profile || 'curiosity-tests-racecar' }}
     secrets: inherit
 
